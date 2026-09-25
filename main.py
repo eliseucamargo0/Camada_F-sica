@@ -22,16 +22,16 @@ plt.xlabel("amostra")           #Define eixo de amostra no gráfico
 plt.ylabel("amplitude")         #Define eixo de amplitude no gráfico
 plt.show()                      #Mostra o gráfico
 
-threshold=0.2
+threshold=0.7
 
-sinal = (np.abs(gravacao) > threshold)#Define o threshold criando novo array apenas com verdadeiro em batidas e falso em silencio
+sinal = (np.abs(gravacao) > threshold)              #Define o threshold criando novo array apenas com verdadeiro em batidas e falso em silencio
 plt.plot(sinal)         
 plt.xlabel("Amostras")
 plt.ylabel("Verdadeiro/Falso")        
 plt.show()                                          #Cria gráfico de sinais.
 
 
-tquebra = fs * 0.03                                 #declara microsegundos convertidos para amostras
+tquebra = fs * 0.05                                 #declara microsegundos convertidos para amostras
 indice = np.where(sinal)[0]                         #Cria array onde apenas foi denotado true no array sinal 
 quebra = np.where(np.diff(indice)>tquebra)[0]+1     #Identifica todas as quebras, separando de fato o silencio das batidas atraves da tquebra
 batidas = np.split(indice, quebra)                  #Cria os grupos com indices declarando assim onde há inicio de uma batida e termino de cada uma
