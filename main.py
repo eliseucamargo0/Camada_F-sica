@@ -61,3 +61,46 @@ for i in simbolos:
     else:
         resultado.append(3)                         #Controle de erros... pode ser modificado
 print(resultado)                                    
+
+
+
+# VERIFICAÇÃO DE PARIDADE - MÉTODO 1
+
+def calcular_paridade(bits):     # Conta quantos bits 1 existem nos 8 bits de dados.
+    quantidade = sum(bits)       # Se a quantidade de 1 for par, o bit de paridade será 0.              
+                                
+    if quantidade % 2 == 0:      # Se for ímpar, o bit de paridade será 1.
+        paridade = 0             # Assim, os 9 bits terão sempre uma quantidade par de 1.
+    else:
+        paridade = 1
+
+    return paridade
+
+
+def verificar_paridade(bits, paridade_recebida):     # Calcula qual deveria ser o bit de paridade   
+    paridade_esperada = calcular_paridade(bits) # de acordo com os 8 bits recebidos.  
+    if paridade_esperada == paridade_recebida: # Compara o bit esperado com o bit recebido.
+        return True                            # Iguais = transmissão considerada correta.
+    else:                                      # Diferentes = possível erro na transmissão.
+        return False
+
+
+if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
+    paridade = calcular_paridade(resultado) # Só calculamos a paridade quando recebemos exatamente 8 bits.
+
+    print("Bit de paridade:", paridade) # Calcula o 9º bit do quadro, chamado de bit de paridade.
+
+    # Por enquanto, estamos simulando que o 9º bit
+    # recebido chegou corretamente.
+    # Depois vamos substituir isso pela transmissão real.
+    paridade_recebida = paridade
+        
+    if verificar_paridade(resultado, paridade_recebida): # Verifica se o bit recebido é igual ao esperado.
+        print("SUCESSO")
+    else:
+        print("FALHA DE TRANSMISSÃO")
+
+else: # Se não houver exatamente 8 bits,
+    
+    print("Erro: é necessário receber 8 bits.")
+   
