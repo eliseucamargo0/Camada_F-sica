@@ -42,7 +42,7 @@ batida_fim = []
 
 for i in batidas:   
     # Verifica se existe alguma batida nessa parte.
-    if len(i) >= 5:
+    if len(i) >= 500:
 
         # Guarda o início da batida.
         batida_inicio.append(i[0])
@@ -53,7 +53,7 @@ batida_inicio = np.array(batida_inicio)
 batida_fim = np.array(batida_fim)
 
 silencio = batida_inicio[1:] - batida_fim[:-1]
-
+print("Intervalos entre batidas:", silencio)
 intervalo = 20000                                   #threshold que decide se é batida dupla ou singular
 resultado = []
 diferente = np.where(silencio > intervalo)[0] + 1   #Encontra sempre que silencio ocorre
@@ -108,7 +108,7 @@ if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
     else:
         print("FALHA DE TRANSMISSÃO")
 
-else: # Se não houver exatamente 8 bits,
+else: # Se não houver exatamente 9 bits,
     
     print("Erro: é necessário receber 8 bits.")
    
