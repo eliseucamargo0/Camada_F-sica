@@ -22,7 +22,7 @@ plt.xlabel("amostra")           #Define eixo de amostra no gráfico
 plt.ylabel("amplitude")         #Define eixo de amplitude no gráfico
 plt.show()                      #Mostra o gráfico
 
-threshold=0.7
+threshold=0.05
 
 sinal = (np.abs(gravacao) > threshold)              #Define o threshold criando novo array apenas com verdadeiro em batidas e falso em silencio
 plt.plot(sinal)         
@@ -35,14 +35,20 @@ tquebra = fs * 0.05                                 #declara microsegundos conve
 indice = np.where(sinal)[0]                         #Cria array onde apenas foi denotado true no array sinal 
 quebra = np.where(np.diff(indice)>tquebra)[0]+1     #Identifica todas as quebras, separando de fato o silencio das batidas atraves da tquebra
 batidas = np.split(indice, quebra)                  #Cria os grupos com indices declarando assim onde há inicio de uma batida e termino de cada uma
-
+print("Quantidade de batidas detectadas:", len(batidas))
+print("Tamanho de cada batida:", [len(i) for i in batidas])
 batida_inicio = []                                 
 batida_fim = []
 
 for i in batidas:   
-    batida_inicio.append(i[0])                      #guarda no array o inicio de cada batida no array de inicio
-    batida_fim.append(i[-1])                        #guarda no array o termino de cada batida
+    # Verifica se existe alguma batida nessa parte.
+    if len(i) >= 5:
 
+        # Guarda o início da batida.
+        batida_inicio.append(i[0])
+
+        # Guarda o fim da batida.
+        batida_fim.append(i[-1])
 batida_inicio = np.array(batida_inicio)             
 batida_fim = np.array(batida_fim)
 
@@ -88,7 +94,9 @@ def verificar_paridade(bits, paridade_recebida):     # Calcula qual deveria ser 
 if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
     paridade = calcular_paridade(resultado) # Só calculamos a paridade quando recebemos exatamente 8 bits.
 
-    print("Bit de paridade:", paridade) # Calcula o 9º bit do quadro, chamado de bit de paridade.
+    # Junta os 8 bits de dados + o bit de paridade.
+    quadro = resultado + [paridade]
+    print("Quadro de 9 bits:", quadro) # Calcula o 9º bit do quadro, chamado de bit de paridade.
 
     # Por enquanto, estamos simulando que o 9º bit
     # recebido chegou corretamente.
@@ -103,4 +111,5 @@ if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
 else: # Se não houver exatamente 8 bits,
     
     print("Erro: é necessário receber 8 bits.")
+   
    
