@@ -1,28 +1,40 @@
 import numpy as np          #NumPy, biblioteca para criação de arrays
 import sounddevice as sd    #Biblioteca responsavel por ler entrada na placa de audio (microfone)
 import matplotlib.pyplot as plt #Biblioteca que serve apenas para vizualizar graficamente audio gravado
+from matplotlib.animation import FuncAnimation
 
 # 1. Parâmetros do sinal analógico
 fs = 44100                      # Deve ser ajustado de acordo com microfone, define total de amostras
 tempo_total = 10                # segundos de duração da gravação
 sd.default.samplerate = fs      # Declara padrão para frequencia, que vai ser usado posteriormente 
 sd.default.channels = 1         # Declara padrão para canais, que vai ser usado posteriormente
+gravado=[]
 
+buffer = np.zeros(fs)   # janela de 1 segundo, começa "em silêncio"
 
-print("Microfone captando:")    #Marca o inicio da gravação para o usuario
-gravacao=sd.rec(                #É a chamada da biblioteca que liga o microfone e capta de acordo com o tempo total dado. 
-    int(tempo_total*fs)
-)
-sd.wait()                       #Pausa execução do codigo até o fim da gravação
-print("Captura feita.")         #Marca termino da gravação
+def callback(indata, frames, time, status):
+    global buffer
+    if status:
+        print(status)
+    buffer = np.roll(buffer, -frames)   # empurra tudo pra esquerda
+    buffer[-frames:] = indata[:, 0]     # coloca o pedaço novo no final
+    gravado.append(indata.copy())
 
+fig, ax = plt.subplots()
+linha, = ax.plot(buffer)
+ax.set_ylim(-1, 1)          # o sounddevice entrega amplitudes entre -1 e 1             #Mostra o gráfico
 
-plt.plot(gravacao)              #Começa gráfico
-plt.xlabel("amostra")           #Define eixo de amostra no gráfico
-plt.ylabel("amplitude")         #Define eixo de amplitude no gráfico
-plt.show()                      #Mostra o gráfico
+def atualizar(frame):
+    linha.set_ydata(buffer)  # troca só os valores de Y da linha existente
+    return linha,
 
-threshold=0.05
+ani = FuncAnimation(fig, atualizar, interval=30, blit=False, cache_frame_data=False)    #cria animação
+
+with sd.InputStream(samplerate=fs, channels=1, blocksize=1024, callback=callback):
+    plt.show()
+gravacao = np.concatenate(gravado)   # vira (N, 1), o mesmo formato que o sd.rec() devolvia
+
+threshold=0.75
 
 sinal = (np.abs(gravacao) > threshold)              #Define o threshold criando novo array apenas com verdadeiro em batidas e falso em silencio
 plt.plot(sinal)         
@@ -42,7 +54,7 @@ batida_fim = []
 
 for i in batidas:   
     # Verifica se existe alguma batida nessa parte.
-    if len(i) >= 500:
+    if len(i) >= 1:
 
         # Guarda o início da batida.
         batida_inicio.append(i[0])
