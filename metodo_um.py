@@ -88,11 +88,11 @@ def calcular_paridade(bits):     # Conta quantos bits 1 existem nos 8 bits de da
     quantidade = sum(bits)       # Se a quantidade de 1 for par, o bit de paridade será 0.              
                                 
     if quantidade % 2 == 0:      # Se for ímpar, o bit de paridade será 1.
-        paridadenecessaria = 0             # Assim, os 9 bits terão sempre uma quantidade par de 1.
+        paridade = 0             # Assim, os 9 bits terão sempre uma quantidade par de 1.
     else:
-        paridadenecessaria = 1
+        paridade = 1
 
-    return paridadenecessaria
+    return paridade
 
 
 def verificar_paridade(bits, paridade_recebida):     # Calcula qual deveria ser o bit de paridade   
