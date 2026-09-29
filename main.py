@@ -22,7 +22,7 @@ plt.xlabel("amostra")           #Define eixo de amostra no gráfico
 plt.ylabel("amplitude")         #Define eixo de amplitude no gráfico
 plt.show()                      #Mostra o gráfico
 
-threshold=0.05
+threshold=0.03      #define q é uma batida válida, ou seja, se a amplitude do sinal for maior que 0.05, é considerado batida, caso contrário é considerado silêncio.
 
 sinal = (np.abs(gravacao) > threshold)              #Define o threshold criando novo array apenas com verdadeiro em batidas e falso em silencio
 plt.plot(sinal)         
@@ -95,22 +95,14 @@ def verificar_paridade(bits, paridade_recebida):     # Calcula qual deveria ser 
         return False
 
 
-if len(resultado) == 8:
-    paridade = calcular_paridade(resultado)
+if len(resultado) == 9:
+    # Os 8 primeiros bits são os dados.
+    bits_recebidos = resultado[:8]
 
-    # Monta o quadro: 8 bits de dados + 1 bit de paridade.
-    quadro = resultado + [paridade]
+    # O 9º bit é a paridade recebida.
+    paridade_recebida = resultado[8]
 
-    print("Quadro de 9 bits:", quadro)
-
-    simular_erro = False  # Altere para True para simular um erro na transmissão.
-    # O receptor recebe os 9 bits do quadro.
-    bits_recebidos = quadro[:8]
-    paridade_recebida = quadro[8]
-
-    if simular_erro:
-        paridade_recebida = 1 - paridade_recebida
-
+    print("Quadro de 9 bits:", resultado)
     print("Bits recebidos:", bits_recebidos)
     print("Paridade recebida:", paridade_recebida)
 
@@ -120,4 +112,4 @@ if len(resultado) == 8:
         print("FALHA DE TRANSMISSÃO")
 
 else:
-    print("Erro: é necessário receber 8 bits.")
+    print("Erro: é necessário receber 9 bits.")
