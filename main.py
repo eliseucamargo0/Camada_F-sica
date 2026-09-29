@@ -102,11 +102,10 @@ if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
     quadro = resultado + [paridade]
     print("Quadro de 9 bits:", quadro) # Calcula o 9º bit do quadro, chamado de bit de paridade.
 
-    # Por enquanto, estamos simulando que o 9º bit
-    # recebido chegou corretamente.
-    # Depois vamos substituir isso pela transmissão real.
-    paridade_recebida = paridade
-        
+    
+    paridade_recebida = 1 - paridade
+    print("Paridade esperada:", paridade)
+    print("Paridade recebida:", paridade_recebida)    
     if verificar_paridade(resultado, paridade_recebida): # Verifica se o bit recebido é igual ao esperado.
         print("SUCESSO")
     else:
