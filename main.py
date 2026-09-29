@@ -95,24 +95,25 @@ def verificar_paridade(bits, paridade_recebida):     # Calcula qual deveria ser 
         return False
 
 
-if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
-    paridade = calcular_paridade(resultado) # Só calculamos a paridade quando recebemos exatamente 8 bits.
+if len(resultado) == 8:
+    paridade = calcular_paridade(resultado)
 
-    # Junta os 8 bits de dados + o bit de paridade.
+    # Monta o quadro: 8 bits de dados + 1 bit de paridade.
     quadro = resultado + [paridade]
-    print("Quadro de 9 bits:", quadro) # Calcula o 9º bit do quadro, chamado de bit de paridade.
 
-    
-    paridade_recebida = 1 - paridade
-    print("Paridade esperada:", paridade)
-    print("Paridade recebida:", paridade_recebida)    
-    if verificar_paridade(resultado, paridade_recebida): # Verifica se o bit recebido é igual ao esperado.
+    print("Quadro de 9 bits:", quadro)
+
+    # O receptor recebe os 9 bits do quadro.
+    bits_recebidos = quadro[:8]
+    paridade_recebida = quadro[8]
+
+    print("Bits recebidos:", bits_recebidos)
+    print("Paridade recebida:", paridade_recebida)
+
+    if verificar_paridade(bits_recebidos, paridade_recebida):
         print("SUCESSO")
     else:
         print("FALHA DE TRANSMISSÃO")
 
-else: # Se não houver exatamente 9 bits,
-    
+else:
     print("Erro: é necessário receber 8 bits.")
-   
-   
