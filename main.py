@@ -103,9 +103,13 @@ if len(resultado) == 8:
 
     print("Quadro de 9 bits:", quadro)
 
+    simular_erro = False  # Altere para True para simular um erro na transmissão.
     # O receptor recebe os 9 bits do quadro.
     bits_recebidos = quadro[:8]
     paridade_recebida = quadro[8]
+
+    if simular_erro:
+        paridade_recebida = 1 - paridade_recebida
 
     print("Bits recebidos:", bits_recebidos)
     print("Paridade recebida:", paridade_recebida)
