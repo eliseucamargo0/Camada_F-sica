@@ -1,149 +1,463 @@
 import numpy as np
 import sounddevice as sd
-import matplotlib.pyplot as plt
-
+import time
 
 # MÉTODO 2 - FSK (Frequency Shift Keying)
-#   bit 0 → tom em F0
-#   bit 1 → tom em F1 
 
+# Bit 0 -> 440 Hz
+# Bit 1 -> 880 Hz
 
-fs = 44100          # taxa de amostragem
-duracao_bit = 0.3   # duração de cada bit em segundos
+FS = 44100
 
-# Frequências escolhidas (precisam ser audíveis e distintas)
-F0 = 440    # Hz - frequência para bit 0
-F1 = 880    # Hz - frequência para bit 1
+F0 = 440
+F1 = 880
 
+DURACAO_BIT = 0.12
 
-# EMISSOR: gerar o som de uma sequência de bits
+PREAMBULO = [1, 0, 1, 0, 1, 0, 1, 0]
 
+# CRC-8
 
-def gerar_tom(frequencia, duracao, fs):
-    """Gera uma senoide pura na frequência desejada."""
-    t = np.linspace(0, duracao, int(fs * duracao), endpoint=False)
-    sinal = np.sin(2 * np.pi * frequencia * t)
-    return sinal
-
-
-def emitir_bits(bits, duracao_bit, fs):
+def calcular_crc8(dados):
     """
-    Converte uma lista de bits em um sinal de áudio.
-    Cada bit vira um tom na frequência correspondente.
+    Calcula o CRC-8 dos bytes recebidos.
     """
-    sinal = np.array([])
+
+    crc = 0
+
+    for byte in dados:
+        crc ^= byte
+
+        for _ in range(8):
+            if crc & 0x80:
+                crc = ((crc << 1) ^ 0x07) & 0xFF
+            else:
+                crc = (crc << 1) & 0xFF
+
+    return crc
+
+# CONVERSÃO DE BYTES PARA BITS
+
+def bytes_para_bits(dados):
+    bits = []
+
+    for byte in dados:
+        for i in range(7, -1, -1):
+            bits.append((byte >> i) & 1)
+
+    return bits
+
+
+def bits_para_bytes(bits):
+    if len(bits) % 8 != 0:
+        return None
+
+    dados = bytearray()
+
+    for i in range(0, len(bits), 8):
+        byte = 0
+
+        for bit in bits[i:i + 8]:
+            byte = (byte << 1) | bit
+
+        dados.append(byte)
+
+    return bytes(dados)
+
+# MONTAGEM DO QUADRO
+
+def criar_quadro(mensagem):
+    """
+    Estrutura:
+
+    PREÂMBULO
+    TAMANHO
+    DADOS
+    CRC-8
+    """
+
+    dados = mensagem.encode("utf-8")
+
+    if len(dados) > 255:
+        raise ValueError("Mensagem muito grande. Máximo: 255 bytes.")
+
+    tamanho = len(dados)
+
+    conteudo_crc = bytes([tamanho]) + dados
+
+    crc = calcular_crc8(conteudo_crc)
+
+    quadro = bytes([tamanho]) + dados + bytes([crc])
+
+    bits = PREAMBULO + bytes_para_bits(quadro)
+
+    return bits
+
+# GERAÇÃO DO TOM
+
+def gerar_tom(frequencia, duracao):
+    """
+    Gera uma senoide na frequência especificada.
+    """
+
+    quantidade = int(FS * duracao)
+
+    t = np.arange(quantidade) / FS
+
+    return np.sin(2 * np.pi * frequencia * t)
+
+# EMISSOR FSK
+
+def emitir_bits(bits):
+    """
+    Converte cada bit em uma frequência:
+
+    0 -> 440 Hz
+    1 -> 880 Hz
+    """
+
+    sinal = []
 
     for bit in bits:
+
         if bit == 0:
-            tom = gerar_tom(F0, duracao_bit, fs)
+            tom = gerar_tom(F0, DURACAO_BIT)
         else:
-            tom = gerar_tom(F1, duracao_bit, fs)
+            tom = gerar_tom(F1, DURACAO_BIT)
 
-        # Adiciona um pequeno silêncio entre os bits para facilitar a detecção
-        silencio = np.zeros(int(fs * 0.05))
-        sinal = np.concatenate([sinal, tom, silencio])
+        sinal.append(tom)
 
-    return sinal
+    if not sinal:
+        return np.array([])
+
+    return np.concatenate(sinal)
 
 
-# Teste do emissor
-bits_enviados = [1, 0, 1, 1, 0, 0, 1, 0]
-print("Bits enviados:", bits_enviados)
-
-sinal = emitir_bits(bits_enviados, duracao_bit, fs)
-
-# Visualiza o sinal gerado
-plt.figure(figsize=(12, 4))
-plt.plot(sinal[:2000])
-plt.title("Sinal gerado (início) - veja como a frequência muda entre os bits")
-plt.xlabel("Amostra")
-plt.ylabel("Amplitude")
-plt.show()
-
-# Toca o som
-print("Tocando o som...")
-sd.play(sinal.astype(np.float32), samplerate=fs)
-sd.wait()
-print("Fim da reprodução.")
-
-#RECEPTOR: detectar a frequência de cada janela
-def detectar_frequencia(janela, fs):
+def transmitir_mensagem(mensagem):
     """
-    Usa FFT para descobrir a frequência dominante de um pedaço de áudio.
-    Retorna a frequência em Hz.
+    Cria o quadro, transforma em FSK e reproduz pelo alto-falante.
     """
-    # Aplica uma janela de Hanning para reduzir artefatos da FFT
-    janela_hann = janela * np.hanning(len(janela))
 
-    # Calcula a FFT (Transformada Rápida de Fourier)
-    fft_resultado = np.fft.rfft(janela_hann)
+    bits = criar_quadro(mensagem)
 
-    # Pega o valor absoluto (magnitude) de cada frequência
-    magnitudes = np.abs(fft_resultado)
+    sinal = emitir_bits(bits)
 
-    # Descobre qual frequência tem a maior magnitude
-    freq_indices = np.fft.rfftfreq(len(janela), d=1/fs)
-    freq_dominante = freq_indices[np.argmax(magnitudes)]
+    print("\n================================")
+    print("       TRANSMISSÃO FSK")
+    print("================================")
 
-    return freq_dominante
+    print("Mensagem:", mensagem)
+    print("Bits transmitidos:", len(bits))
 
-def receber_sinal(sinal, duracao_bit, fs):
+    taxa = 1 / DURACAO_BIT
+
+    print(f"Taxa teórica: {taxa:.2f} bps")
+
+    print("\nTransmitindo...")
+
+    sd.play(sinal.astype(np.float32), FS)
+    sd.wait()
+
+    print("Transmissão concluída.")
+
+
+# DETECÇÃO DE FREQUÊNCIA
+
+def detectar_frequencia(janela):
     """
-    Divide o sinal em janelas (uma por bit) e detecta a frequência de cada uma.
+    Detecta se a janela possui F0 ou F1.
+
+    Em vez de procurar qualquer frequência da FFT,
+    verificamos diretamente as duas frequências utilizadas
+    pelo protocolo FSK.
     """
-    # Tamanho de cada janela = duração do bit em amostras
-    tamanho_janela = int(fs * duracao_bit)
 
-    # Tamanho do silêncio entre bits (para pular)
-    tamanho_silencio = int(fs * 0.05)
+    janela = janela * np.hanning(len(janela))
 
-    # Tamanho total de cada "slot" (bit + silêncio)
-    slot = tamanho_janela + tamanho_silencio
+    fft = np.fft.rfft(janela)
 
-    bits_recebidos = []
-    posicao = 0
+    frequencias = np.fft.rfftfreq(len(janela), 1 / FS)
 
-    while posicao + tamanho_janela <= len(sinal):
-        # Extrai a janela do bit atual
-        janela = sinal[posicao:posicao + tamanho_janela]
+    magnitudes = np.abs(fft)
 
-        # Detecta a frequência
-        freq = detectar_frequencia(janela, fs)
+    indice_f0 = np.argmin(np.abs(frequencias - F0))
+    indice_f1 = np.argmin(np.abs(frequencias - F1))
 
-        # Decide se é 0 ou 1 baseado na frequência detectada
-        # Usamos o ponto médio entre F0 e F1 como threshold
-        threshold_freq = (F0 + F1) / 2
-        if freq < threshold_freq:
-            bits_recebidos.append(0)
+    magnitude_f0 = magnitudes[indice_f0]
+    magnitude_f1 = magnitudes[indice_f1]
+
+    if magnitude_f0 > magnitude_f1:
+        return 0
+
+    return 1
+
+# DECODIFICAÇÃO DOS BITS
+
+def decodificar_bits(sinal):
+    """
+    Divide o áudio em janelas e identifica cada bit.
+    """
+
+    tamanho_bit = int(FS * DURACAO_BIT)
+
+    quantidade_bits = len(sinal) // tamanho_bit
+
+    bits = []
+
+    for i in range(quantidade_bits):
+
+        inicio = i * tamanho_bit
+        fim = inicio + tamanho_bit
+
+        janela = sinal[inicio:fim]
+
+        if len(janela) < tamanho_bit:
+            break
+
+        bit = detectar_frequencia(janela)
+
+        bits.append(bit)
+
+    return bits
+
+# LOCALIZAÇÃO DO PREÂMBULO
+
+def encontrar_preambulo(bits):
+    """
+    Procura a sequência:
+
+    10101010
+
+    usada para identificar o início do quadro.
+    """
+
+    tamanho = len(PREAMBULO)
+
+    for i in range(len(bits) - tamanho + 1):
+
+        if bits[i:i + tamanho] == PREAMBULO:
+            return i + tamanho
+
+    return -1
+
+# RECEPÇÃO E VERIFICAÇÃO
+
+def processar_bits(bits):
+    """
+    Localiza o quadro, recupera os dados e verifica o CRC.
+    """
+
+    inicio = encontrar_preambulo(bits)
+
+    if inicio == -1:
+        print("\nFALHA DE TRANSMISSÃO")
+        print("Preâmbulo não encontrado.")
+        return None
+
+    bits_quadro = bits[inicio:]
+    
+    if len(bits_quadro) < 8:
+        print("\nFALHA DE TRANSMISSÃO")
+        print("Quadro incompleto.")
+        return None
+
+    # Primeiro byte = tamanho da mensagem
+    tamanho_bits = bits_quadro[:8]
+
+    tamanho_bytes = bits_para_bytes(tamanho_bits)[0]
+
+    quantidade_total_bits = (1 + tamanho_bytes + 1) * 8
+
+    if len(bits_quadro) < quantidade_total_bits:
+        print("\nFALHA DE TRANSMISSÃO")
+        print("Quadro incompleto.")
+        return None
+
+    quadro = bits_para_bytes(
+        bits_quadro[:quantidade_total_bits]
+    )
+
+    if quadro is None:
+        print("\nFALHA DE TRANSMISSÃO")
+        return None
+
+    tamanho = quadro[0]
+
+    dados = quadro[1:1 + tamanho]
+
+    crc_recebido = quadro[1 + tamanho]
+
+    dados_crc = bytes([tamanho]) + dados
+
+    crc_calculado = calcular_crc8(dados_crc)
+
+    print("\n================================")
+    print("          RESULTADO")
+    print("================================")
+
+    print("CRC recebido:", hex(crc_recebido))
+    print("CRC calculado:", hex(crc_calculado))
+
+    if crc_recebido != crc_calculado:
+
+        print("\nFALHA DE TRANSMISSÃO")
+        print("Os dados foram corrompidos.")
+
+        return None
+
+    try:
+        mensagem = dados.decode("utf-8")
+    except UnicodeDecodeError:
+
+        print("\nFALHA DE TRANSMISSÃO")
+        print("Dados inválidos.")
+
+        return None
+
+    print("\nSUCESSO")
+    print("Dados íntegros.")
+    print("Mensagem recebida:", mensagem)
+
+    return mensagem
+
+# RECEPÇÃO PELO MICROFONE
+
+def receber_microfone(duracao):
+    """
+    Grava o áudio através do microfone.
+    """
+
+    print("\n================================")
+    print("        RECEPÇÃO FSK")
+    print("================================")
+
+    print(f"Gravando por {duracao:.1f} segundos...")
+    print("Fale/transmita o sinal agora.")
+
+    audio = sd.rec(
+        int(duracao * FS),
+        samplerate=FS,
+        channels=1,
+        dtype="float32"
+    )
+
+    sd.wait()
+
+    print("Gravação concluída.")
+
+    return audio[:, 0]
+
+# TESTE LOCAL
+
+def teste_local():
+    """
+    Testa o método sem utilizar microfone.
+    """
+
+    mensagem = "Teste FSK"
+
+    print("\n================================")
+    print("          TESTE LOCAL")
+    print("================================")
+
+    bits = criar_quadro(mensagem)
+
+    print("Mensagem original:", mensagem)
+    print("Quantidade de bits:", len(bits))
+
+    sinal = emitir_bits(bits)
+
+    bits_recebidos = decodificar_bits(sinal)
+
+    processar_bits(bits_recebidos)
+
+# TESTE COM MICROFONE
+
+def teste_microfone():
+    """
+    O receptor grava o áudio pelo microfone.
+
+    Em outro computador deve estar sendo executada
+    a transmissão.
+    """
+
+    mensagem = input("\nMensagem a transmitir: ")
+
+    bits = criar_quadro(mensagem)
+
+    duracao_total = len(bits) * DURACAO_BIT
+
+    print("\nPrepare o outro computador para transmitir.")
+
+    input(
+        "\nPressione ENTER quando estiver pronto para iniciar "
+        "a gravação do microfone..."
+    )
+
+    # Pequena margem para iniciar a transmissão
+    duracao_gravacao = duracao_total + 3
+
+    audio = receber_microfone(duracao_gravacao)
+
+    print("\nProcessando áudio...")
+
+    bits_recebidos = decodificar_bits(audio)
+
+    print("Bits detectados:", len(bits_recebidos))
+
+    processar_bits(bits_recebidos)
+
+# MENU
+
+def main():
+
+    while True:
+
+        print("\n======================================")
+        print("       MÉTODO 2 - FSK")
+        print("======================================")
+
+        print("1 - Teste local")
+        print("2 - Receber pelo microfone")
+        print("3 - Transmitir mensagem")
+        print("0 - Sair")
+
+        opcao = input("\nEscolha: ")
+
+        if opcao == "1":
+
+            teste_local()
+
+        elif opcao == "2":
+
+            duracao = float(
+                input("Duração da gravação em segundos: ")
+            )
+
+            audio = receber_microfone(duracao)
+
+            bits = decodificar_bits(audio)
+
+            print("\nBits detectados:", bits)
+
+            processar_bits(bits)
+
+        elif opcao == "3":
+
+            mensagem = input("\nMensagem: ")
+
+            transmitir_mensagem(mensagem)
+
+        elif opcao == "0":
+
+            print("Encerrando.")
+
+            break
+
         else:
-            bits_recebidos.append(1)
 
-        # Avança para o próximo slot
-        posicao += slot
-
-    return bits_recebidos
+            print("Opção inválida.")
 
 
-#Teste do receptor com o sinal gerado (sem ruído)
-print("\nTeste sem ruído")
-bits_detectados = receber_sinal(sinal, duracao_bit, fs)
-print("Bits detectados:", bits_detectados)
-print("Correto?", bits_enviados == bits_detectados)
-
-#TESTE COM RUÍDO
-# Adiciona ruído aleatório ao sinal para simular um ambiente real
-ruido = np.random.normal(0, 0.3, len(sinal))
-sinal_com_ruido = sinal + ruido
-
-print("\n--- Teste com ruído ---")
-bits_com_ruido = receber_sinal(sinal_com_ruido, duracao_bit, fs)
-print("Bits detectados:", bits_com_ruido)
-print("Correto?", bits_enviados == bits_com_ruido)
-
-# Visualiza o sinal com ruído
-plt.figure(figsize=(12, 4))
-plt.plot(sinal_com_ruido[:2000])
-plt.title("Sinal com ruído (início)")
-plt.xlabel("Amostra")
-plt.ylabel("Amplitude")
-plt.show()
+if __name__ == "__main__":
+    main()
