@@ -319,13 +319,498 @@ FALHA DE TRANSMISSÃO
 
 Essa verificação permite detectar determinados erros ocorridos durante a transmissão.
 
-## 4.5 Método 2 — [nome do método escolhido]
+### 4.5 Método 2 — FSK (Frequency Shift Keying)
 
-A definir pela equipe.
+O Método 2 utiliza a técnica de modulação **FSK (Frequency Shift Keying)** para realizar a transmissão de informações utilizando sinais sonoros.
+
+Nesse método, cada bit é representado por uma frequência diferente.
+
+```text
+Bit 0 → 440 Hz
+Bit 1 → 880 Hz
+```
+
+A utilização de duas frequências permite que o receptor identifique os bits analisando a frequência predominante de cada parte do sinal recebido.
+
+O método utiliza uma taxa de amostragem de 44.100 Hz e uma duração de 0,3 segundo para cada bit.
+
+Além disso, é utilizado um pequeno intervalo de silêncio entre os bits para facilitar a separação dos sinais durante o processamento.
+
+---
+
+## 4.5.1 Representação dos Bits
+
+No Método 2, os bits são representados por dois tons diferentes.
+
+```text
+0 → F0 = 440 Hz
+
+1 → F1 = 880 Hz
+```
+
+Por exemplo, para transmitir:
+
+```text
+10110010
+```
+
+o sistema gera os seguintes tons:
+
+```text
+880 Hz → 440 Hz → 880 Hz → 880 Hz
+→ 440 Hz → 440 Hz → 880 Hz → 440 Hz
+```
+
+Cada frequência permanece durante o período definido para o bit.
+
+---
+
+## 4.5.2 Emissor
+
+O emissor é responsável por transformar uma sequência de bits em um sinal de áudio.
+
+O programa possui uma função chamada `gerar_tom()`, responsável por criar uma senoide na frequência escolhida.
+
+```python
+def gerar_tom(frequencia, duracao, fs):
+    t = np.linspace(0, duracao, int(fs * duracao), endpoint=False)
+    sinal = np.sin(2 * np.pi * frequencia * t)
+    return sinal
+```
+
+A função recebe:
+
+* a frequência do tom;
+* a duração;
+* a taxa de amostragem.
+
+A partir desses valores, é criado o sinal sonoro correspondente.
+
+A função `emitir_bits()` percorre a sequência de bits e escolhe a frequência correspondente.
+
+```text
+Bit 0 → gera tom de 440 Hz
+Bit 1 → gera tom de 880 Hz
+```
+
+Após cada tom, o programa acrescenta um pequeno período de silêncio de 0,05 segundo.
+
+Esse silêncio ajuda o receptor a separar um bit do próximo.
+
+---
+
+## 4.5.3 Geração do Sinal
+
+A sequência utilizada no teste do programa foi:
+
+```text
+10110010
+```
+
+No código:
+
+```python
+bits_enviados = [1, 0, 1, 1, 0, 0, 1, 0]
+```
+
+O programa transforma essa sequência em um sinal de áudio.
+
+Depois, o sinal é visualizado graficamente e reproduzido pelo dispositivo de áudio.
+
+A reprodução é realizada utilizando a biblioteca SoundDevice:
+
+```python
+sd.play(sinal.astype(np.float32), samplerate=fs)
+sd.wait()
+```
+
+Dessa forma, o emissor transforma a sequência binária em uma sequência de tons sonoros.
+
+---
+
+## 4.5.4 Receptor
+
+O receptor é responsável por analisar o sinal recebido e identificar qual frequência está presente em cada intervalo correspondente a um bit.
+
+Para realizar essa análise, o programa utiliza a **FFT (Transformada Rápida de Fourier)**.
+
+A FFT permite analisar as frequências presentes em um sinal.
+
+O programa procura a frequência que possui a maior magnitude e considera essa frequência como a frequência dominante daquele trecho do áudio.
+
+---
+
+## 4.5.5 Detecção da Frequência
+
+A função responsável por identificar a frequência é:
+
+```python
+def detectar_frequencia(janela, fs):
+```
+
+Primeiramente, o programa aplica uma janela de Hanning:
+
+```python
+janela_hann = janela * np.hanning(len(janela))
+```
+
+Essa etapa auxilia na análise do sinal e reduz alguns efeitos indesejados nas extremidades da janela.
+
+Depois, é calculada a FFT:
+
+```python
+fft_resultado = np.fft.rfft(janela_hann)
+```
+
+O programa calcula as magnitudes das frequências e identifica aquela que apresenta o maior valor.
+
+A frequência correspondente é considerada a frequência dominante do trecho analisado.
+
+---
+
+## 4.5.6 Identificação dos Bits
+
+Depois de encontrar a frequência dominante, o programa precisa decidir se aquele trecho representa um 0 ou um 1.
+
+Para isso, é utilizado um valor intermediário entre as duas frequências:
+
+```python
+threshold_freq = (F0 + F1) / 2
+```
+
+Como:
+
+```text
+F0 = 440 Hz
+F1 = 880 Hz
+```
+
+o valor utilizado como limite é:
+
+```text
+(440 + 880) / 2 = 660 Hz
+```
+
+Assim:
+
+```text
+Frequência < 660 Hz → bit 0
+
+Frequência ≥ 660 Hz → bit 1
+```
+
+Dessa forma, frequências próximas de 440 Hz são interpretadas como 0 e frequências próximas de 880 Hz são interpretadas como 1.
+
+---
+
+## 4.5.7 Divisão do Sinal
+
+Para analisar cada bit individualmente, o receptor divide o sinal em janelas.
+
+A duração definida para cada bit é:
+
+```python
+duracao_bit = 0.3
+```
+
+Com uma taxa de amostragem de 44.100 Hz, cada janela possui aproximadamente:
+
+```text
+44.100 × 0,3 = 13.230 amostras
+```
+
+Após cada janela, o programa pula o intervalo de silêncio de 0,05 segundo.
+
+Portanto, cada posição ocupa aproximadamente:
+
+```text
+0,3 segundo de sinal
++
+0,05 segundo de silêncio
+
+= 0,35 segundo
+```
+
+---
+
+## 4.5.8 Teste do Método
+
+O programa realiza inicialmente um teste utilizando o sinal gerado pelo próprio emissor, sem adição de ruído.
+
+O objetivo é verificar se o receptor consegue identificar corretamente a sequência de bits produzida.
+
+O programa compara:
+
+```text
+Bits enviados
+        ↓
+Bits detectados
+```
+
+A comparação é feita por:
+
+```python
+bits_enviados == bits_detectados
+```
+
+Dessa forma, é possível verificar se a sequência detectada pelo receptor é igual à sequência original.
+
+---
+
+## 4.5.9 Teste com Ruído
+
+Além do teste sem ruído, o programa possui um segundo teste que adiciona ruído aleatório ao sinal.
+
+O ruído é gerado utilizando:
+
+```python
+ruido = np.random.normal(0, 0.3, len(sinal))
+```
+
+Depois, ele é somado ao sinal original:
+
+```python
+sinal_com_ruido = sinal + ruido
+```
+
+Esse procedimento simula uma situação em que o sinal sonoro sofre interferências do ambiente.
+
+O receptor tenta novamente identificar as frequências e reconstruir a sequência de bits.
+
+O resultado é comparado com os bits enviados.
+
+Também é apresentado um gráfico do sinal com ruído para permitir a visualização da interferência adicionada.
+
+---
 
 ## 4.6 Detecção de Erros do Método 2
 
-A definir de acordo com o método escolhido para o Método 2.
+**A definir após a implementação da técnica de detecção de erros escolhida pela equipe.**
+
+O código atual realiza a comparação entre os bits enviados e os bits detectados, porém a técnica específica de detecção de erros ainda será acrescentada.
+
+---
+
+## 4.7 Taxa de Transmissão
+
+No Método 2, cada bit possui duração de 0,3 segundo e existe um intervalo de silêncio de 0,05 segundo entre os bits.
+
+Assim, cada bit ocupa aproximadamente:
+
+```text
+0,3 + 0,05 = 0,35 segundo
+```
+
+A taxa aproximada, considerando esse tempo por bit, é:
+
+```text
+1 / 0,35 ≈ 2,86 bits por segundo
+```
+
+Portanto, a taxa aproximada atual do método é de **2,86 bps**.
+
+Essa taxa ainda poderá ser modificada durante os testes. A equipe deverá verificar se é possível diminuir a duração dos bits mantendo a identificação correta das frequências, principalmente quando houver ruído.
+
+---
+
+# 5. Funcionamento do Software
+
+## 5.1 Emissor
+
+O emissor transforma uma sequência de bits em sinais sonoros.
+
+O processo pode ser representado da seguinte forma:
+
+```text
+Sequência de bits
+        ↓
+Escolha da frequência
+        ↓
+Geração do tom
+        ↓
+Inclusão do silêncio
+        ↓
+Sinal de áudio
+        ↓
+Reprodução
+```
+
+A representação utilizada é:
+
+```text
+0 → 440 Hz
+1 → 880 Hz
+```
+
+---
+
+## 5.2 Receptor
+
+O receptor recebe o sinal de áudio e analisa a frequência predominante de cada intervalo.
+
+O processamento ocorre nas seguintes etapas:
+
+1. Define a duração de cada bit.
+2. Divide o sinal em janelas.
+3. Aplica a janela de Hanning.
+4. Calcula a FFT.
+5. Identifica a frequência dominante.
+6. Compara a frequência com 660 Hz.
+7. Classifica o trecho como 0 ou 1.
+8. Avança para o próximo intervalo.
+9. Repete o processo para os demais bits.
+10. Compara os bits detectados com os bits enviados.
+
+De forma simplificada:
+
+```text
+Sinal de áudio
+      ↓
+Divisão em janelas
+      ↓
+Janela de Hanning
+      ↓
+FFT
+      ↓
+Frequência dominante
+      ↓
+Comparação com 660 Hz
+      ↓
+Bit 0 ou Bit 1
+      ↓
+Sequência recebida
+      ↓
+Comparação com sequência enviada
+```
+
+---
+
+## 5.3 Bibliotecas Utilizadas
+
+### NumPy
+
+A biblioteca NumPy é utilizada para operações matemáticas, criação dos sinais e processamento dos dados.
+
+Também é utilizada para realizar a FFT.
+
+```python
+import numpy as np
+```
+
+### SoundDevice
+
+A biblioteca SoundDevice é utilizada para reproduzir o sinal sonoro.
+
+```python
+import sounddevice as sd
+```
+
+### Matplotlib
+
+A biblioteca Matplotlib é utilizada para visualizar graficamente os sinais gerados e os sinais com ruído.
+
+```python
+import matplotlib.pyplot as plt
+```
+
+---
+
+## 5.4 Interface/Terminal
+
+A interação com o usuário ocorre principalmente pelo terminal.
+
+Durante a execução, o programa apresenta informações como:
+
+```text
+Bits enviados: [1, 0, 1, 1, 0, 0, 1, 0]
+
+Tocando o som...
+
+Fim da reprodução.
+
+Teste sem ruído
+
+Bits detectados: [...]
+
+Correto? True
+```
+
+No teste com ruído, são apresentados os bits identificados pelo receptor e o resultado da comparação.
+
+---
+
+# 6. Divisão de Tarefas da Equipe
+
+A definir pela equipe.
+
+---
+
+# 7. Desafios, Problemas e Soluções
+
+Durante o desenvolvimento do Método 2, foram considerados alguns desafios relacionados à transmissão e recepção dos sinais sonoros.
+
+Entre eles estão:
+
+* escolha das frequências utilizadas para representar os bits;
+* diferenciação entre as frequências F0 e F1;
+* definição da duração de cada bit;
+* definição do intervalo de silêncio;
+* identificação da frequência dominante;
+* utilização da FFT;
+* sincronização das janelas de análise;
+* influência do ruído na transmissão;
+* necessidade de manter uma comunicação confiável;
+* busca por uma taxa de transmissão maior.
+
+As frequências escolhidas foram:
+
+```text
+F0 = 440 Hz
+F1 = 880 Hz
+```
+
+A diferença entre as frequências permite utilizar um valor intermediário de 660 Hz para classificar os sinais.
+
+O teste com ruído foi incluído para analisar o comportamento do método quando o sinal sofre interferências.
+
+A duração de 0,3 segundo por bit também poderá ser alterada durante os testes para verificar se é possível aumentar a velocidade de transmissão mantendo a confiabilidade.
+
+---
+
+# 8. Demonstração em Vídeo
+
+A definir.
+
+---
+
+# 9. Uso de Inteligência Artificial
+
+A definir de acordo com o desenvolvimento realizado pela equipe.
+
+---
+
+# 10. Conclusão
+
+O Método 2 utiliza a técnica FSK (Frequency Shift Keying) para realizar uma transmissão acústica de informações binárias.
+
+Nesse método, o bit 0 é representado por um tom de 440 Hz e o bit 1 por um tom de 880 Hz.
+
+O emissor gera os sinais sonoros a partir de uma sequência de bits. O receptor analisa o áudio utilizando a FFT para identificar a frequência dominante de cada intervalo e determinar qual bit foi transmitido.
+
+O sistema também possui testes sem ruído e com ruído, permitindo analisar o funcionamento do método em diferentes condições.
+
+A duração atual de cada bit é de 0,3 segundo, com 0,05 segundo de silêncio entre os bits, resultando em uma taxa aproximada de 2,86 bps.
+
+A taxa ainda poderá ser otimizada durante os testes, buscando aumentar a velocidade sem comprometer a identificação correta dos bits em condições de ruído.
+
+A técnica de detecção de erros do Método 2 será acrescentada posteriormente, conforme a escolha da equipe.
+
+---
+
+# 11. Licença
+
+A definir.
+
 
 ## 4.7 Taxa de Transmissão
 
