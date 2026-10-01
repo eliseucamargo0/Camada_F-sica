@@ -1,3 +1,4 @@
+import estetica 
 import numpy as np          #NumPy, biblioteca para criação de arrays
 import sounddevice as sd    #Biblioteca responsavel por ler entrada na placa de audio (microfone)
 import matplotlib.pyplot as plt #Biblioteca que serve apenas para vizualizar graficamente audio gravado
