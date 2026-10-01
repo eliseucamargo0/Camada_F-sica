@@ -319,299 +319,129 @@ FALHA DE TRANSMISSÃO
 
 Essa verificação permite detectar determinados erros ocorridos durante a transmissão.
 
-### 4.5 Método 2 — FSK (Frequency Shift Keying)
+#### 4.5 Método 2 — Transmissão por FSK
 
-O Método 2 utiliza a técnica de modulação **FSK (Frequency Shift Keying)** para realizar a transmissão de informações utilizando sinais sonoros.
+Para o segundo método de transmissão foi escolhida a técnica **FSK (Frequency Shift Keying)**, na qual cada bit é representado por uma frequência diferente.
 
-Nesse método, cada bit é representado por uma frequência diferente.
+Neste método foram utilizadas duas frequências:
 
-```text
-Bit 0 → 440 Hz
-Bit 1 → 880 Hz
-```
+* **Bit 0 → 440 Hz**
+* **Bit 1 → 880 Hz**
 
-A utilização de duas frequências permite que o receptor identifique os bits analisando a frequência predominante de cada parte do sinal recebido.
+A duração utilizada para cada bit é de **0,12 segundos**, resultando em uma taxa teórica de aproximadamente:
 
-O método utiliza uma taxa de amostragem de 44.100 Hz e uma duração de 0,3 segundo para cada bit.
+**Taxa = 1 / 0,12 ≈ 8,33 bps**
 
-Além disso, é utilizado um pequeno intervalo de silêncio entre os bits para facilitar a separação dos sinais durante o processamento.
+O sinal utilizado é uma onda senoidal, gerada matematicamente pelo programa. Durante a transmissão, cada bit é convertido em seu respectivo tom e enviado pelo alto-falante.
 
----
+O receptor utiliza o microfone para capturar o áudio. Em seguida, o programa analisa o sinal utilizando a **Transformada Rápida de Fourier (FFT)** para identificar qual das duas frequências está presente e, consequentemente, determinar se o bit recebido é 0 ou 1.
 
-## 4.5.1 Representação dos Bits
+#### 4.5.1 Estrutura da transmissão
 
-No Método 2, os bits são representados por dois tons diferentes.
+O Método 2 utiliza um quadro formado por:
 
-```text
-0 → F0 = 440 Hz
+**PREÂMBULO + TAMANHO + DADOS + CRC-8**
 
-1 → F1 = 880 Hz
-```
+O preâmbulo utilizado é:
 
-Por exemplo, para transmitir:
+`10101010`
 
-```text
-10110010
-```
+Sua função é permitir que o receptor identifique onde começa o quadro da mensagem.
 
-o sistema gera os seguintes tons:
+O campo **TAMANHO** possui 1 byte e informa quantos bytes existem na mensagem.
 
-```text
-880 Hz → 440 Hz → 880 Hz → 880 Hz
-→ 440 Hz → 440 Hz → 880 Hz → 440 Hz
-```
+O campo **DADOS** contém a mensagem propriamente dita, convertida para bytes utilizando UTF-8.
 
-Cada frequência permanece durante o período definido para o bit.
+Por fim, é acrescentado um byte contendo o resultado do **CRC-8**, utilizado para verificar se os dados foram alterados durante a transmissão.
 
----
+#### 4.5.2 Funcionamento do emissor
 
-## 4.5.2 Emissor
+O emissor recebe uma mensagem digitada pelo usuário e realiza as seguintes etapas:
 
-O emissor é responsável por transformar uma sequência de bits em um sinal de áudio.
+1. Converte a mensagem para UTF-8.
+2. Verifica o tamanho da mensagem.
+3. Calcula o CRC-8.
+4. Monta o quadro.
+5. Converte os bytes do quadro para bits.
+6. Adiciona o preâmbulo.
+7. Converte cada bit em uma frequência:
 
-O programa possui uma função chamada `gerar_tom()`, responsável por criar uma senoide na frequência escolhida.
+   * 0 → 440 Hz
+   * 1 → 880 Hz
+8. Reproduz o sinal pelo alto-falante.
 
-```python
-def gerar_tom(frequencia, duracao, fs):
-    t = np.linspace(0, duracao, int(fs * duracao), endpoint=False)
-    sinal = np.sin(2 * np.pi * frequencia * t)
-    return sinal
-```
+O programa também apresenta no terminal a quantidade de bits transmitidos e a taxa teórica de transmissão.
 
-A função recebe:
+#### 4.5.3 Funcionamento do receptor
 
-* a frequência do tom;
-* a duração;
-* a taxa de amostragem.
+O receptor utiliza o microfone para gravar o sinal acústico recebido.
 
-A partir desses valores, é criado o sinal sonoro correspondente.
+Depois da gravação, o programa divide o áudio em janelas correspondentes à duração de cada bit. Para cada janela é realizada uma análise utilizando FFT.
 
-A função `emitir_bits()` percorre a sequência de bits e escolhe a frequência correspondente.
+O programa verifica diretamente as magnitudes das frequências de 440 Hz e 880 Hz:
 
-```text
-Bit 0 → gera tom de 440 Hz
-Bit 1 → gera tom de 880 Hz
-```
+* Se a magnitude de 440 Hz for maior, o bit é interpretado como **0**.
+* Se a magnitude de 880 Hz for maior, o bit é interpretado como **1**.
 
-Após cada tom, o programa acrescenta um pequeno período de silêncio de 0,05 segundo.
+Depois que os bits são identificados, o receptor procura o preâmbulo `10101010`. Quando encontrado, os bits seguintes são interpretados como o quadro da mensagem.
 
-Esse silêncio ajuda o receptor a separar um bit do próximo.
+O primeiro byte informa o tamanho da mensagem. Com essa informação, o receptor consegue identificar quais bytes correspondem aos dados e qual byte corresponde ao CRC.
 
----
+### 4.6 Detecção de Erros do Método 2 — CRC-8
 
-## 4.5.3 Geração do Sinal
+Para detectar possíveis erros durante a transmissão do Método 2 foi utilizado o **CRC-8 (Cyclic Redundancy Check)**.
 
-A sequência utilizada no teste do programa foi:
+O CRC é calculado antes da transmissão utilizando o campo de tamanho da mensagem junto com os dados.
 
-```text
-10110010
-```
+O valor calculado é acrescentado ao final do quadro:
 
-No código:
+**PREÂMBULO + TAMANHO + DADOS + CRC**
 
-```python
-bits_enviados = [1, 0, 1, 1, 0, 0, 1, 0]
-```
+No receptor, o CRC é calculado novamente utilizando os dados recebidos.
 
-O programa transforma essa sequência em um sinal de áudio.
+São então comparados:
 
-Depois, o sinal é visualizado graficamente e reproduzido pelo dispositivo de áudio.
+**CRC recebido × CRC calculado**
 
-A reprodução é realizada utilizando a biblioteca SoundDevice:
+Se os dois valores forem iguais, o programa considera que os dados recebidos estão íntegros e apresenta:
 
-```python
-sd.play(sinal.astype(np.float32), samplerate=fs)
-sd.wait()
-```
+`SUCESSO`
 
-Dessa forma, o emissor transforma a sequência binária em uma sequência de tons sonoros.
+Caso os valores sejam diferentes, o programa identifica que houve alteração nos dados e apresenta:
 
----
+`FALHA DE TRANSMISSÃO`
 
-## 4.5.4 Receptor
+Dessa forma, o CRC-8 permite identificar alterações ocorridas durante a transmissão acústica.
 
-O receptor é responsável por analisar o sinal recebido e identificar qual frequência está presente em cada intervalo correspondente a um bit.
+Além da comparação do CRC, o programa também verifica situações como:
 
-Para realizar essa análise, o programa utiliza a **FFT (Transformada Rápida de Fourier)**.
+* preâmbulo não encontrado;
+* quadro incompleto;
+* dados inválidos;
+* mensagem que não pode ser decodificada em UTF-8.
 
-A FFT permite analisar as frequências presentes em um sinal.
+Nessas situações também é apresentada a indicação de:
 
-O programa procura a frequência que possui a maior magnitude e considera essa frequência como a frequência dominante daquele trecho do áudio.
+`FALHA DE TRANSMISSÃO`
 
----
+### 4.7 Taxa de Transmissão do Método 2
 
-## 4.5.5 Detecção da Frequência
+A duração utilizada atualmente para cada bit é de **0,12 segundos**.
 
-A função responsável por identificar a frequência é:
+Assim, a taxa teórica é calculada por:
 
-```python
-def detectar_frequencia(janela, fs):
-```
+**Taxa = 1 / duração do bit**
 
-Primeiramente, o programa aplica uma janela de Hanning:
+**Taxa = 1 / 0,12**
 
-```python
-janela_hann = janela * np.hanning(len(janela))
-```
+**Taxa ≈ 8,33 bps**
 
-Essa etapa auxilia na análise do sinal e reduz alguns efeitos indesejados nas extremidades da janela.
+Essa é a taxa teórica do protocolo considerando a duração definida para cada bit. A taxa efetiva de transmissão de uma mensagem também depende da quantidade de bits adicionais utilizados pelo preâmbulo, pelo campo de tamanho e pelo CRC-8.
 
-Depois, é calculada a FFT:
+O valor de 0,12 segundos foi escolhido como parâmetro inicial para buscar um equilíbrio entre velocidade e confiabilidade da comunicação acústica.
 
-```python
-fft_resultado = np.fft.rfft(janela_hann)
-```
+Como o objetivo do Método 2 é obter uma transmissão com maior taxa de dados mantendo a confiabilidade diante de ruídos, esse parâmetro pode ser ajustado posteriormente a partir dos testes realizados com o microfone e com diferentes condições de ruído.
 
-O programa calcula as magnitudes das frequências e identifica aquela que apresenta o maior valor.
-
-A frequência correspondente é considerada a frequência dominante do trecho analisado.
-
----
-
-## 4.5.6 Identificação dos Bits
-
-Depois de encontrar a frequência dominante, o programa precisa decidir se aquele trecho representa um 0 ou um 1.
-
-Para isso, é utilizado um valor intermediário entre as duas frequências:
-
-```python
-threshold_freq = (F0 + F1) / 2
-```
-
-Como:
-
-```text
-F0 = 440 Hz
-F1 = 880 Hz
-```
-
-o valor utilizado como limite é:
-
-```text
-(440 + 880) / 2 = 660 Hz
-```
-
-Assim:
-
-```text
-Frequência < 660 Hz → bit 0
-
-Frequência ≥ 660 Hz → bit 1
-```
-
-Dessa forma, frequências próximas de 440 Hz são interpretadas como 0 e frequências próximas de 880 Hz são interpretadas como 1.
-
----
-
-## 4.5.7 Divisão do Sinal
-
-Para analisar cada bit individualmente, o receptor divide o sinal em janelas.
-
-A duração definida para cada bit é:
-
-```python
-duracao_bit = 0.3
-```
-
-Com uma taxa de amostragem de 44.100 Hz, cada janela possui aproximadamente:
-
-```text
-44.100 × 0,3 = 13.230 amostras
-```
-
-Após cada janela, o programa pula o intervalo de silêncio de 0,05 segundo.
-
-Portanto, cada posição ocupa aproximadamente:
-
-```text
-0,3 segundo de sinal
-+
-0,05 segundo de silêncio
-
-= 0,35 segundo
-```
-
----
-
-## 4.5.8 Teste do Método
-
-O programa realiza inicialmente um teste utilizando o sinal gerado pelo próprio emissor, sem adição de ruído.
-
-O objetivo é verificar se o receptor consegue identificar corretamente a sequência de bits produzida.
-
-O programa compara:
-
-```text
-Bits enviados
-        ↓
-Bits detectados
-```
-
-A comparação é feita por:
-
-```python
-bits_enviados == bits_detectados
-```
-
-Dessa forma, é possível verificar se a sequência detectada pelo receptor é igual à sequência original.
-
----
-
-## 4.5.9 Teste com Ruído
-
-Além do teste sem ruído, o programa possui um segundo teste que adiciona ruído aleatório ao sinal.
-
-O ruído é gerado utilizando:
-
-```python
-ruido = np.random.normal(0, 0.3, len(sinal))
-```
-
-Depois, ele é somado ao sinal original:
-
-```python
-sinal_com_ruido = sinal + ruido
-```
-
-Esse procedimento simula uma situação em que o sinal sonoro sofre interferências do ambiente.
-
-O receptor tenta novamente identificar as frequências e reconstruir a sequência de bits.
-
-O resultado é comparado com os bits enviados.
-
-Também é apresentado um gráfico do sinal com ruído para permitir a visualização da interferência adicionada.
-
----
-
-## 4.6 Detecção de Erros do Método 2
-
-**A definir após a implementação da técnica de detecção de erros escolhida pela equipe.**
-
-O código atual realiza a comparação entre os bits enviados e os bits detectados, porém a técnica específica de detecção de erros ainda será acrescentada.
-
----
-
-## 4.7 Taxa de Transmissão
-
-No Método 2, cada bit possui duração de 0,3 segundo e existe um intervalo de silêncio de 0,05 segundo entre os bits.
-
-Assim, cada bit ocupa aproximadamente:
-
-```text
-0,3 + 0,05 = 0,35 segundo
-```
-
-A taxa aproximada, considerando esse tempo por bit, é:
-
-```text
-1 / 0,35 ≈ 2,86 bits por segundo
-```
-
-Portanto, a taxa aproximada atual do método é de **2,86 bps**.
-
-Essa taxa ainda poderá ser modificada durante os testes. A equipe deverá verificar se é possível diminuir a duração dos bits mantendo a identificação correta das frequências, principalmente quando houver ruído.
-
----
 
 # 5. Funcionamento do Software
 
