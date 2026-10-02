@@ -1,4 +1,4 @@
-from estetica import CIANO, VERDE, VERMELHO, AMARELO, ROXO, cor, titulo, sucesso, falha
+from estetica import ROSA, VERDE, VERMELHO, AMARELO, ROXO, cor, titulo, sucesso, falha
 import numpy as np          #NumPy, biblioteca para criação de arrays
 import sounddevice as sd    #Biblioteca responsavel por ler entrada na placa de audio (microfone)
 import matplotlib.pyplot as plt #Biblioteca que serve apenas para vizualizar graficamente audio gravado
@@ -116,10 +116,11 @@ if len(resultado) == 8: # O quadro do Método 1 possui 8 bits de dados.
     # Depois vamos substituir isso pela transmissão real.
     paridade_recebida = paridade
         
-    if verificar_paridade(resultado, paridade_recebida): # Verifica se o bit recebido é igual ao esperado.
-        print("SUCESSO")
-    else:
-        print("FALHA DE TRANSMISSÃO")
+    from estetica import Painel
+    painel = Painel()
+    painel.reproduzir(resultado)
+    painel.resultado(resultado, paridade_recebida,
+                     verificar_paridade(resultado, paridade_recebida))
 
 else: # Se não houver exatamente 9 bits,
     
