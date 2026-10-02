@@ -1,38 +1,21 @@
-# Licença: MIT (ajuste para a licença escolhida pela equipe)
-# Camada Física usando Som - Redes de Computadores
 """
-estetica.py - visual do terminal e dos gráficos.
+Módulo de estética compartilhado (Método 1 e Método 2).
 
-Princípio (igual ao vídeo de referência):
-    1 batida  -> imprime 0
-    2 batidas -> imprime 1
+Importar este arquivo já aplica o tema escuro do matplotlib e habilita
+cores no terminal. Também oferece as cores e funções de impressão.
 
-Uso rápido:
-    from estetica import Painel
-    p = Painel()
-    p.reproduzir([0, 1, 0, 1, 0, 1, 1, 0])      # anima os bits chegando
-    p.resultado([0,1,0,1,0,1,1,0], paridade=0, ok=True)
+Licença: MIT (ajuste para a licença escolhida pela equipe)
+Copyright (c) <ANO> <NOMES DA EQUIPE>
 """
-import io
+
 import os
-import sys
-import time
-import threading
-import contextlib
-from datetime import datetime
-import numpy as np
 import matplotlib.pyplot as plt
 
 # ----------------------------------------------------------------------------
-# Paleta (um único conjunto de cores usado no terminal E nos gráficos)
+# Paleta de cores (para gráficos)
 # ----------------------------------------------------------------------------
 BG, PAINEL, TEXTO = "#0f172a", "#1e293b", "#e2e8f0"
-CINZA = "#64748b"
-ROSA, VERDE, VERMELHO = "#ff8da1", "#4ade80", "#f87171"
-AMARELO, ROXO, CIANO = "#fbbf24", "#a78bfa", "#7dd3fc"
-
-COR_BIT = {0: ROSA, 1: ROXO}     # bit 0 = rosa, bit 1 = roxo
-COR_PARIDADE = AMARELO
+CIANO, VERDE, VERMELHO, AMARELO, ROXO = "#22d3ee", "#4ade80", "#f87171", "#fbbf24", "#a78bfa"
 
 # ----------------------------------------------------------------------------
 # Tema escuro dos gráficos (aplicado automaticamente ao importar)
