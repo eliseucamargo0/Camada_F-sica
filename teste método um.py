@@ -36,7 +36,6 @@ T_TIMEOUT_QUADRO = 6.0     # RECEPTOR: quadro incompleto parado por isso é desc
 BITS_DADOS, BITS_QUADRO = 8, 9
 SIMBOLO_INVALIDO = 3       # 3+ batidas (ou 0) no mesmo bit
 
-
 # ----------------------------------------------------------------------------
 # Quadro e paridade
 # ----------------------------------------------------------------------------
@@ -78,13 +77,14 @@ def validar_quadro(bits):
 # EMISSOR: gera as batidas pelo alto-falante
 # ----------------------------------------------------------------------------
 def gerar_clique(fs=FS):
-    """Uma batida sintética curta (12 ms): seno amortecido + um pouco de ruído."""
-    n = int(0.012 * fs)
-    t = np.arange(n) / fs
-    rng = np.random.default_rng(1)
-    env = np.exp(-t / 0.003)
-    return env * (0.7 * np.sin(2 * np.pi * 2000 * t) + 0.3 * rng.uniform(-1, 1, n))
-
+    """Som de UMA batida: 'boing' de desenho animado (180 ms)."""
+    dur = 0.2
+    t = np.arange(int(dur * fs)) / fs
+    f = 400 + 350 * np.exp(-t / 0.05) + 70 * np.sin(2 * np.pi * 28 * t) * np.exp(-t / 0.08)
+    fase = 2 * np.pi * np.cumsum(f) / fs
+    onda = (np.sin(fase) + 0.3 * np.sin(2 * fase) + 0.1 * np.sin(3 * fase)) \
+           * np.minimum(t / 0.003, 1) * np.exp(-t / 0.08)
+    return onda / np.abs(onda).max()
 
 def gerar_audio_quadro(bits, fs=FS, t_inicio=0.5, t_final=1.0):
     """Retorna (onda, cliques, duração). cliques = [(tempo_s, índice_do_bit)]."""
