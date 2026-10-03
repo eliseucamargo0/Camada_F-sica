@@ -4,8 +4,6 @@ Módulo de estética compartilhado (Método 1 e Método 2).
 Importar este arquivo já aplica o tema escuro do matplotlib e habilita
 cores no terminal. Também oferece as cores e funções de impressão.
 
-Licença: MIT (ajuste para a licença escolhida pela equipe)
-Copyright (c) <ANO> <NOMES DA EQUIPE>
 """
 
 import os
