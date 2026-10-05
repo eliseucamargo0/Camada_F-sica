@@ -1,18 +1,5 @@
 # Camada Física usando Som - Redes de Computadores
-"""
-grafico_visual.py - adiciona os GRÁFICOS (matplotlib) ao receptor da versão "teste",
-SEM alterar teste_método_um.py nem testeestetico.py.
 
-Coloque este arquivo na mesma pasta dos dois arquivos "teste" e rode:
-    python grafico_visual.py
-
-Menu:
-  [1] Emissor  -> igual ao original
-  [2] Receptor -> igual ao original (painel no terminal) + janela com 2 gráficos:
-        • em cima: microfone ao vivo (última 1 s) com as linhas do limiar
-        • embaixo: sinal da transmissão inteira, trechos acima do limiar
-          marcados (verdadeiro/falso), e cada símbolo decodificado (0 ou 1)
-"""
 import glob
 import importlib.util
 import os
@@ -31,17 +18,18 @@ if AQUI not in sys.path:
 # Carrega o teste_método_um.py (nome com acento/espaço: procura pelo padrão)
 # ----------------------------------------------------------------------------
 def _carregar_modulo():
-    achados = sorted(glob.glob(os.path.join(AQUI, "método_um.pyq")))
+    achados = sorted(glob.glob(os.path.join(AQUI, "metodo_um.py")))
     if not achados:
-        sys.exit("Não encontrei o arquivo 'método_um.py' nesta pasta.")
+        py = sorted(f for f in os.listdir(AQUI) if f.lower().endswith(".py"))
+        sys.exit("Não encontrei o arquivo 'metodo_um.py' nesta pasta.\n"
+                 f"Arquivos .py aqui: {', '.join(py)}")
     spec = importlib.util.spec_from_file_location("metodo_um", achados[0])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
-
 mod = _carregar_modulo()
-from estética_oficial import (BG, PAINEL, TEXTO, CINZA, ROSA, VERDE, VERMELHO,  # noqa: E402
+from estetica_oficial import (BG, PAINEL, TEXTO, CINZA, ROSA, VERDE, VERMELHO,  # noqa: E402
                            AMARELO, ROXO, CIANO, COR_BIT, titulo)
 
 FS = mod.FS

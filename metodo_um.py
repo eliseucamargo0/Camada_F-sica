@@ -19,7 +19,7 @@ from datetime import datetime
 
 import numpy as np
 
-from estética_oficial import (Painel, cor, titulo, ler_tecla, modo_teclado,
+from estetica_oficial import (Painel, cor, titulo, ler_tecla, modo_teclado,
                       CIANO, VERDE, AMARELO, VERMELHO, CINZA, TEXTO)
 
 # ----------------------------------------------------------------------------
