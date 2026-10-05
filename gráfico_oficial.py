@@ -31,17 +31,17 @@ if AQUI not in sys.path:
 # Carrega o teste_método_um.py (nome com acento/espaço: procura pelo padrão)
 # ----------------------------------------------------------------------------
 def _carregar_modulo():
-    achados = sorted(glob.glob(os.path.join(AQUI, "teste*um.py")))
+    achados = sorted(glob.glob(os.path.join(AQUI, "método_um.pyq")))
     if not achados:
-        sys.exit("Não encontrei o arquivo 'teste_método_um.py' nesta pasta.")
-    spec = importlib.util.spec_from_file_location("metodo_um_teste", achados[0])
+        sys.exit("Não encontrei o arquivo 'método_um.py' nesta pasta.")
+    spec = importlib.util.spec_from_file_location("metodo_um", achados[0])
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
 mod = _carregar_modulo()
-from testeestetico import (BG, PAINEL, TEXTO, CINZA, ROSA, VERDE, VERMELHO,  # noqa: E402
+from estética_oficial import (BG, PAINEL, TEXTO, CINZA, ROSA, VERDE, VERMELHO,  # noqa: E402
                            AMARELO, ROXO, CIANO, COR_BIT, titulo)
 
 FS = mod.FS
