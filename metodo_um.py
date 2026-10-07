@@ -1,18 +1,6 @@
 # Licença: MIT (ajuste para a licença escolhida pela equipe)
 # Camada Física usando Som - Redes de Computadores
-"""
-metodo_um.py - Método 1 (batidas): EMISSOR e RECEPTOR.
 
-    Bit 0 = silêncio + 1 batida  + silêncio
-    Bit 1 = silêncio + 2 batidas + silêncio
-    Quadro = 8 bits de dados + 1 bit de paridade par (9 bits)
-
-O receptor usa o 9º bit RECEBIDO (batido por quem transmite) para validar o quadro;
-por isso uma paridade errada gera FALHA DE TRANSMISSÃO de verdade.
-O visual fica em testeestetico.py.
-
-Rodar:  python metodo_um.py
-"""
 import threading
 import time
 from datetime import datetime
