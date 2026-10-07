@@ -1,10 +1,4 @@
 # Camada Física usando Som - Redes de Computadores
-"""
-main.py - HUB do projeto. Só escolhe para onde ir; cada método tem seu próprio menu.
-
-Coloque este arquivo na mesma pasta dos demais e rode:
-    python main.py
-"""
 import importlib
 import importlib.util
 import os
