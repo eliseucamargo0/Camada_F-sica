@@ -1,12 +1,6 @@
 # Licença: MIT (ajuste para a licença escolhida pela equipe)
 # Camada Física usando Som - Redes de Computadores
-"""
-estetica.py - SÓ o visual (terminal e gráficos). Nenhuma lógica de protocolo aqui.
 
-    1 batida  -> 0        2 batidas -> 1
-
-Pré-visualizar sem microfone:  python estetica.py
-"""
 import io
 import os
 import sys
